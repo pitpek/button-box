@@ -1,0 +1,74 @@
+#include <Arduino.h>
+
+// 4x4 keypad -> Arduino Pro Micro
+// rows: R1..R4, cols: C1..C4 (обычно 8 проводов)
+// Логика: колонки INPUT_PULLUP, по очереди тянем строки в LOW.
+
+constexpr uint8_t ROWS = 4;
+constexpr uint8_t COLS = 4;
+
+const uint8_t rowPins[ROWS] = {2, 3, 4, 5};
+const uint8_t colPins[COLS] = {6, 7, 8, 9};
+
+const char keyMap[ROWS][COLS] = {
+    {'1', '2', '3', 'A'},
+    {'4', '5', '6', 'B'},
+    {'7', '8', '9', 'C'},
+    {'*', '0', '#', 'D'},
+};
+
+char readKey() {
+  for (uint8_t r = 0; r < ROWS; r++) {
+    // Все строки держим в HIGH, активную строку тянем в LOW.
+    for (uint8_t i = 0; i < ROWS; i++) {
+      pinMode(rowPins[i], OUTPUT);
+      digitalWrite(rowPins[i], HIGH);
+    }
+
+    digitalWrite(rowPins[r], LOW);
+    delayMicroseconds(8);
+
+    for (uint8_t c = 0; c < COLS; c++) {
+      if (digitalRead(colPins[c]) == LOW) {
+        return keyMap[r][c];
+      }
+    }
+  }
+
+  return '\0';
+}
+
+void setup() {
+  Serial.begin(115200);
+  delay(300);
+  Serial.println("Button box: boot");
+
+  for (uint8_t r = 0; r < ROWS; r++) {
+    pinMode(rowPins[r], OUTPUT);
+    digitalWrite(rowPins[r], HIGH);
+  }
+  for (uint8_t c = 0; c < COLS; c++) {
+    pinMode(colPins[c], INPUT_PULLUP);
+  }
+}
+
+void loop() {
+  static char lastKey = '\0';
+  static unsigned long lastChangeMs = 0;
+  constexpr unsigned long debounceMs = 25;
+
+  char key = readKey();
+  unsigned long now = millis();
+
+  // Печатаем только новое стабильное нажатие.
+  if (key != lastKey && (now - lastChangeMs) > debounceMs) {
+    lastChangeMs = now;
+    lastKey = key;
+
+    if (key != '\0') {
+      Serial.print("Pressed: ");
+      Serial.println(key);
+    }
+  }
+}
+
