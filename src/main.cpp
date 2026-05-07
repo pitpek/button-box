@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <Keyboard.h>
 
 // 4x4 keypad -> Arduino Pro Micro
 // rows: R1..R4, cols: C1..C4 (обычно 8 проводов)
@@ -16,6 +17,31 @@ const char keyMap[ROWS][COLS] = {
     {'7', '8', '9', 'C'},
     {'*', '0', '#', 'D'},
 };
+
+void sendCtrlAltNumber(uint8_t number) {
+  // Отправляем Ctrl+Alt+<number>, где number = 1..4.
+  if (number < 1 || number > 4) {
+    return;
+  }
+
+  Keyboard.press(KEY_LEFT_CTRL);
+  Keyboard.press(KEY_LEFT_ALT);
+  Keyboard.press(static_cast<uint8_t>('0' + number));
+  delay(30);
+  Keyboard.releaseAll();
+}
+
+void runModeHotkeyForKey(char key) {
+  if (key == '1') {
+    sendCtrlAltNumber(1);
+  } else if (key == '2') {
+    sendCtrlAltNumber(2);
+  } else if (key == '3') {
+    sendCtrlAltNumber(3);
+  } else if (key == 'A') {
+    sendCtrlAltNumber(4);
+  }
+}
 
 char readKey() {
   for (uint8_t r = 0; r < ROWS; r++) {
@@ -42,6 +68,7 @@ void setup() {
   Serial.begin(115200);
   delay(300);
   Serial.println("Button box: boot");
+  Keyboard.begin();
 
   for (uint8_t r = 0; r < ROWS; r++) {
     pinMode(rowPins[r], OUTPUT);
@@ -56,9 +83,23 @@ void loop() {
   static char lastKey = '\0';
   static unsigned long lastChangeMs = 0;
   constexpr unsigned long debounceMs = 25;
+  static bool waitingRelease = false;
+  static unsigned long cooldownUntilMs = 0;
 
   char key = readKey();
   unsigned long now = millis();
+
+  if (waitingRelease) {
+    if (key == '\0') {
+      waitingRelease = false;
+    } else {
+      return;
+    }
+  }
+
+  if (now < cooldownUntilMs) {
+    return;
+  }
 
   // Печатаем только новое стабильное нажатие.
   if (key != lastKey && (now - lastChangeMs) > debounceMs) {
@@ -68,6 +109,12 @@ void loop() {
     if (key != '\0') {
       Serial.print("Pressed: ");
       Serial.println(key);
+
+      if (key == '1' || key == '2' || key == '3' || key == 'A') {
+        runModeHotkeyForKey(key);
+        waitingRelease = true;
+        cooldownUntilMs = millis() + 250;
+      }
     }
   }
 }
