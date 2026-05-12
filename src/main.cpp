@@ -1,10 +1,6 @@
 #include <Arduino.h>
 #include <Keyboard.h>
 
-// 4x4 keypad -> Arduino Pro Micro
-// rows: R1..R4, cols: C1..C4 (обычно 8 проводов)
-// Логика: колонки INPUT_PULLUP, по очереди тянем строки в LOW.
-
 constexpr uint8_t ROWS = 4;
 constexpr uint8_t COLS = 4;
 
@@ -19,11 +15,6 @@ const char keyMap[ROWS][COLS] = {
 };
 
 void sendCtrlAltNumber(uint8_t number) {
-  // Отправляем Ctrl+Alt+<number>, где number = 1..4.
-  if (number < 1 || number > 4) {
-    return;
-  }
-
   Keyboard.press(KEY_LEFT_CTRL);
   Keyboard.press(KEY_LEFT_ALT);
   Keyboard.press(static_cast<uint8_t>('0' + number));
@@ -45,7 +36,6 @@ void runModeHotkeyForKey(char key) {
 
 char readKey() {
   for (uint8_t r = 0; r < ROWS; r++) {
-    // Все строки держим в HIGH, активную строку тянем в LOW.
     for (uint8_t i = 0; i < ROWS; i++) {
       pinMode(rowPins[i], OUTPUT);
       digitalWrite(rowPins[i], HIGH);
@@ -65,9 +55,6 @@ char readKey() {
 }
 
 void setup() {
-  Serial.begin(115200);
-  delay(300);
-  Serial.println("Button box: boot");
   Keyboard.begin();
 
   for (uint8_t r = 0; r < ROWS; r++) {
@@ -101,15 +88,11 @@ void loop() {
     return;
   }
 
-  // Печатаем только новое стабильное нажатие.
   if (key != lastKey && (now - lastChangeMs) > debounceMs) {
     lastChangeMs = now;
     lastKey = key;
 
     if (key != '\0') {
-      Serial.print("Pressed: ");
-      Serial.println(key);
-
       if (key == '1' || key == '2' || key == '3' || key == 'A') {
         runModeHotkeyForKey(key);
         waitingRelease = true;
@@ -118,4 +101,3 @@ void loop() {
     }
   }
 }
-
