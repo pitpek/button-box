@@ -2,14 +2,14 @@
 #include <Keyboard.h>
 
 constexpr uint8_t kButtonCount = 5;
-const uint8_t buttonPins[kButtonCount] = {6, 7, 8, 9, 10};
+const uint8_t buttonPins[kButtonCount] = {2, 3, 4, 5, 6};
 
 constexpr uint8_t kToggleCount = 2;
 const uint8_t togglePins[kToggleCount] = {14, 15};
 
 constexpr uint8_t kPotCount = 2;
 const uint8_t kPotPins[kPotCount] = {A0, A1};
-constexpr unsigned long kPotLogIntervalMs = 5000;
+constexpr unsigned long kPotLogIntervalMs = 100;
 constexpr unsigned long kDebounceMs = 25;
 constexpr unsigned long kDisplayHotkeyCooldownMs = 280;
 
@@ -134,18 +134,10 @@ void loop() {
   static unsigned long potNextLogMs = 0;
   if (now >= potNextLogMs) {
     potNextLogMs = now + kPotLogIntervalMs;
-    for (uint8_t i = 0; i < kPotCount; i++) {
-      const uint8_t pin = kPotPins[i];
-      if (i > 0) {
-        delayMicroseconds(200);
-      }
-      const uint16_t v = analogRead(pin);
-      Serial.print(F("pot "));
-      Serial.print(static_cast<uint8_t>(i + 1));
-      Serial.print(F(" pin "));
-      printAnalogPin(pin);
-      Serial.print(F(" "));
-      Serial.println(v);
-    }
+    const uint16_t v = analogRead(kPotPins[1]);
+    Serial.print(F("pot 2 pin "));
+    printAnalogPin(kPotPins[1]);
+    Serial.print(F(" "));
+    Serial.println(v);
   }
 }
